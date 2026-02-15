@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
@@ -69,6 +69,7 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
   const transitionLockRef = useRef(false);
 
   useEffect(() => {
+    // keep latest state in ref so global shortcut callbacks never use stale values
     stateRef.current = state;
   }, [state]);
 
@@ -149,7 +150,7 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
         }
         onToast?.({
           type: 'copied',
-          title: 'Copied • Press Ctrl+V',
+          title: 'Copied â€¢ Press Ctrl+V',
           durationMs: 2500,
         });
       }
@@ -190,14 +191,8 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
   useEffect(() => {
     let disposed = false;
     let unlistenFn: (() => void) | null = null;
-
     void listen('toggle-recording', () => {
-      if (transitionLockRef.current) return;
-      if (stateRef.current === 'idle') {
-        void startRecording();
-      } else if (stateRef.current === 'recording') {
-        void stopRecording();
-      }
+      handleToggleFromHotkey();
     })
       .then((unlisten) => {
         if (disposed) {
@@ -216,7 +211,9 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
         unlistenFn();
       }
     };
-  }, [startRecording, stopRecording]);
+  }, [handleToggleFromHotkey]);
 
   return { state, mode, setMode, startRecording, stopRecording, cancel, closeApp };
 }
+
+
