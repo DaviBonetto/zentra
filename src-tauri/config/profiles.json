@@ -1,0 +1,64 @@
+{
+  "profiles": [
+    {
+      "id": "general",
+      "name": "General Prompt",
+      "goal": "Organizar a transcricao do usuario em um prompt claro e util para IA, mantendo fidelidade total ao que foi dito",
+      "return_format": "Texto claro em linguagem natural, preservando contexto, detalhes e intencao original",
+      "warnings": [
+        "Nao inventar informacoes",
+        "Nao remover detalhes relevantes mencionados",
+        "Se o texto for curto, manter curto e objetivo"
+      ],
+      "context_template": "Transcricao original: {{transcript}}\nData/Hora: {{datetime}}\nApp ativo: {{app_context}}"
+    },
+    {
+      "id": "coding-prompt",
+      "name": "Coding / Technical Prompt",
+      "goal": "Gerar prompt tecnico detalhado para LLMs com contexto de codigo, objetivo claro e exemplos quando relevante",
+      "return_format": "Markdown com secoes: Resumo (1-2 linhas), Contexto tecnico, Requisitos (bullet points), Instrucoes (passos claros), Exemplos (opcional)",
+      "warnings": [
+        "Nao explicar teoria longa desnecessaria",
+        "Evitar jargao excessivo; manter linguagem tecnica clara",
+        "Se codigo for mencionado, incluir snippets curtos"
+      ],
+      "context_template": "Timestamp: {{datetime}}\nTranscricao original: {{transcript}}\nApp ativo: {{app_context}}"
+    },
+    {
+      "id": "clarity",
+      "name": "Clarity Only (No AI)",
+      "goal": "Melhorar clareza e gramatica da transcricao sem adicionar conteudo ou transformar intencao",
+      "return_format": "Texto limpo e gramaticalmente correto, mantendo tom e estrutura original",
+      "warnings": [
+        "Nao adicionar informacoes nao mencionadas",
+        "Nao transformar em formato estruturado quando a fala for prosa",
+        "Apenas corrigir typos, pontuacao e capitalizacao"
+      ],
+      "context_template": "{{transcript}}"
+    },
+    {
+      "id": "email-draft",
+      "name": "Email Draft",
+      "goal": "Transformar transcricao em email profissional bem estruturado",
+      "return_format": "Email com: Assunto, Saudacao, Corpo (2-3 paragrafos), Encerramento",
+      "warnings": [
+        "Manter tom profissional e amigavel",
+        "Nao inventar detalhes nao mencionados",
+        "Se faltarem informacoes, usar placeholders como [DESTINATARIO]"
+      ],
+      "context_template": "Contexto: Email para {{app_context}}\n\nTranscricao: {{transcript}}"
+    },
+    {
+      "id": "meeting-notes",
+      "name": "Meeting Notes",
+      "goal": "Organizar transcricao em notas de reuniao estruturadas",
+      "return_format": "Markdown com secoes: Topicos discutidos, Decisoes tomadas, Acoes, Proximos passos",
+      "warnings": [
+        "Extrair apenas informacoes factuais da transcricao",
+        "Nao inventar decisoes ou acoes nao mencionadas",
+        "Manter bullet points concisos"
+      ],
+      "context_template": "Data/Hora: {{datetime}}\n\nTranscricao da reuniao:\n{{transcript}}"
+    }
+  ]
+}
