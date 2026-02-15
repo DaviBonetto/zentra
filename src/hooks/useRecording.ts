@@ -151,7 +151,7 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
         }
         onToast?.({
           type: 'copied',
-          title: 'Copied â€¢ Press Ctrl+V',
+          title: 'Copied • Press Ctrl+V',
           durationMs: 2500,
         });
       }
@@ -230,5 +230,6 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
 
   return { state, mode, setMode, startRecording, stopRecording, cancel, closeApp };
 }
+
 
 
