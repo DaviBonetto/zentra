@@ -43,6 +43,13 @@ struct MicrophoneInfo {
     name: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InputDevicesResponse {
+    devices: Vec<String>,
+    selected: Option<String>,
+}
+
 fn start_audio_level_loop(
     state: &AppState,
     app_handle: tauri::AppHandle,
@@ -149,6 +156,11 @@ fn apply_runtime_config(
         *orchestrator = FailoverOrchestrator::from_env();
     }
 
+    {
+        let mut recorder = state.recorder.lock().map_err(|e| e.to_string())?;
+        recorder.set_selected_input_device(config.input_device_name.clone());
+    }
+
     register_hotkey(app_handle, state, &config.hotkey)
 }
 
@@ -174,13 +186,45 @@ fn stop_mic_monitor(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn get_microphone_info() -> MicrophoneInfo {
+fn get_microphone_info(state: State<'_, AppState>) -> Result<MicrophoneInfo, String> {
+    let recorder = state.recorder.lock().map_err(|e| e.to_string())?;
+    let selected = recorder.selected_input_device();
+    let selected_available = recorder.selected_device_available();
+    drop(recorder);
+
     let host = cpal::default_host();
-    let device = host.default_input_device();
-    MicrophoneInfo {
-        available: device.is_some(),
-        name: device.and_then(|d| d.description().ok().map(|desc| desc.name().to_string())),
-    }
+    let default_name = host.default_input_device().and_then(|d| {
+        d.name()
+            .ok()
+            .or_else(|| d.description().ok().map(|desc| desc.name().to_string()))
+    });
+
+    let (available, name) = match selected {
+        Some(selected_name) if selected_available => (true, Some(selected_name)),
+        Some(_) => (default_name.is_some(), default_name),
+        None => (default_name.is_some(), default_name),
+    };
+
+    Ok(MicrophoneInfo { available, name })
+}
+
+#[tauri::command]
+fn list_input_devices(state: State<'_, AppState>) -> Result<InputDevicesResponse, String> {
+    let recorder = state.recorder.lock().map_err(|e| e.to_string())?;
+    let mut devices = recorder.list_input_devices()?;
+    devices.sort();
+    devices.dedup();
+    Ok(InputDevicesResponse {
+        devices,
+        selected: recorder.selected_input_device(),
+    })
+}
+
+#[tauri::command]
+fn select_input_device(name: Option<String>, state: State<'_, AppState>) -> Result<(), String> {
+    let mut recorder = state.recorder.lock().map_err(|e| e.to_string())?;
+    recorder.set_selected_input_device(name);
+    Ok(())
 }
 
 #[tauri::command]
@@ -250,6 +294,7 @@ fn complete_setup(
     state: State<'_, AppState>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
+    stop_capture_safely(state.inner());
     let config = config::complete_setup(&app_handle, payload)?;
     apply_runtime_config(&app_handle, state.inner(), &config)?;
 
@@ -328,6 +373,35 @@ fn hide_dashboard(app_handle: tauri::AppHandle) -> Result<(), String> {
         window.hide().map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+#[tauri::command]
+fn dashboard_minimize(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("dashboard") {
+        window.minimize().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn dashboard_toggle_maximize(app_handle: tauri::AppHandle) -> Result<bool, String> {
+    let Some(window) = app_handle.get_webview_window("dashboard") else {
+        return Ok(false);
+    };
+
+    let is_maximized = window.is_maximized().map_err(|e| e.to_string())?;
+    if is_maximized {
+        window.unmaximize().map_err(|e| e.to_string())?;
+    } else {
+        window.maximize().map_err(|e| e.to_string())?;
+    }
+
+    window.is_maximized().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn dashboard_close(app_handle: tauri::AppHandle) -> Result<(), String> {
+    hide_dashboard(app_handle)
 }
 
 #[tauri::command]
@@ -459,6 +533,8 @@ pub fn run() {
             start_mic_monitor,
             stop_mic_monitor,
             get_microphone_info,
+            list_input_devices,
+            select_input_device,
             transcribe_audio,
             start_recording_session,
             add_audio_segment,
@@ -476,6 +552,9 @@ pub fn run() {
             update_settings,
             open_dashboard,
             hide_dashboard,
+            dashboard_minimize,
+            dashboard_toggle_maximize,
+            dashboard_close,
             hide_main_window
         ])
         .run(tauri::generate_context!())

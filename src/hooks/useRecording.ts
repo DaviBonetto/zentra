@@ -22,6 +22,12 @@ interface StitchedResult {
   total_duration_secs?: number;
 }
 
+interface SegmentResult {
+  transcript: {
+    provider?: string;
+  };
+}
+
 interface PasteAttempt {
   pasted: boolean;
   reason?: string | null;
@@ -83,11 +89,17 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
       setState('recording');
     } catch (err) {
       console.error('Start recording failed:', err);
+      onToast?.({
+        type: 'error',
+        title: 'Unable to start recording',
+        subtitle: 'Check microphone availability',
+        durationMs: 2400,
+      });
       setState('idle');
     } finally {
       transitionLockRef.current = false;
     }
-  }, []);
+  }, [onToast]);
 
   const stopRecording = useCallback(async () => {
     if (stateRef.current !== 'recording' || transitionLockRef.current) return;
@@ -105,8 +117,10 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
       }
 
       const chunks = splitAudioIntoChunks(audio);
-      for (const chunk of chunks) {
-        await invoke('add_audio_segment', { audio: chunk });
+      for (const [index, chunk] of chunks.entries()) {
+        const segment = await invoke<SegmentResult>('add_audio_segment', { audio: chunk });
+        const provider = segment.transcript?.provider ?? 'unknown';
+        console.debug(`Segment ${index + 1} provider:`, provider);
       }
 
       const result = await invoke<StitchedResult>('finalize_recording_session');

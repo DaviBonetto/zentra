@@ -5,7 +5,11 @@ interface Step4MicTestProps {
   micAvailable: boolean;
   micName: string;
   monitoring: boolean;
+  inputDevices: string[];
+  selectedInputDevice: string;
+  refreshingDevices: boolean;
   onRetryDetect: () => void;
+  onSelectInputDevice: (name: string) => void;
 }
 
 const BAR_COUNT = 24;
@@ -14,7 +18,11 @@ const Step4MicTest: React.FC<Step4MicTestProps> = ({
   micAvailable,
   micName,
   monitoring,
+  inputDevices,
+  selectedInputDevice,
+  refreshingDevices,
   onRetryDetect,
+  onSelectInputDevice,
 }) => {
   const level = useAudioLevel(monitoring);
 
@@ -44,8 +52,29 @@ const Step4MicTest: React.FC<Step4MicTestProps> = ({
         ))}
       </div>
 
+      <div className="setup-field">
+        <label className="setup-label">Input device</label>
+        <div className="setup-mic-device-row">
+          <select
+            className="setup-input setup-input-mono"
+            value={selectedInputDevice}
+            onChange={(event) => onSelectInputDevice(event.target.value)}
+          >
+            <option value="">System default microphone</option>
+            {inputDevices.map((device) => (
+              <option key={device} value={device}>
+                {device}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="setup-primary-outline-btn" onClick={onRetryDetect}>
+            {refreshingDevices ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
       {micAvailable ? (
-        <div className="setup-mic-status success">Microphone detected · {micName || 'Default input'}</div>
+        <div className="setup-mic-status success">Microphone detected • {micName || 'Default input'}</div>
       ) : (
         <div className="setup-mic-status error">
           No microphone found. Check system permissions and try again.

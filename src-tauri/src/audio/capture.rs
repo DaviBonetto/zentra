@@ -13,6 +13,7 @@ pub struct AudioCapture {
     is_recording: bool,
     buffer: Arc<Mutex<AudioBuffer>>,
     level: Arc<AtomicU32>,
+    selected_input_device: Option<String>,
 }
 
 impl AudioCapture {
@@ -22,6 +23,7 @@ impl AudioCapture {
             is_recording: false,
             buffer: Arc::new(Mutex::new(AudioBuffer::new(16000, 1))),
             level: Arc::new(AtomicU32::new(0.0f32.to_bits())),
+            selected_input_device: None,
         }
     }
 
@@ -31,14 +33,10 @@ impl AudioCapture {
         }
 
         let host = cpal::default_host();
-        let device = host
-            .default_input_device()
+        let device = Self::pick_input_device(&host, self.selected_input_device.as_deref())
             .ok_or("No input device available")?;
 
-        let device_name = device
-            .description()
-            .map(|d| d.name().to_string())
-            .unwrap_or_else(|_| "Unknown".to_string());
+        let device_name = Self::device_display_name(&device);
         info!("Input device: {}", device_name);
 
         let config = device.default_input_config().map_err(|e| e.to_string())?;
@@ -93,6 +91,97 @@ impl AudioCapture {
 
     pub fn audio_level_handle(&self) -> Arc<AtomicU32> {
         self.level.clone()
+    }
+
+    pub fn list_input_devices(&self) -> Result<Vec<String>, String> {
+        let host = cpal::default_host();
+        let devices = host
+            .input_devices()
+            .map_err(|e| e.to_string())?
+            .map(|device| Self::device_display_name(&device))
+            .collect::<Vec<_>>();
+        Ok(devices)
+    }
+
+    pub fn selected_input_device(&self) -> Option<String> {
+        self.selected_input_device.clone()
+    }
+
+    pub fn set_selected_input_device(&mut self, name: Option<String>) {
+        self.selected_input_device = name
+            .map(|n| n.trim().to_string())
+            .filter(|n| !n.is_empty());
+    }
+
+    pub fn has_selected_device_available(&self) -> bool {
+        let Some(selected) = self.selected_input_device.as_ref() else {
+            return false;
+        };
+
+        let host = cpal::default_host();
+        let Ok(mut devices) = host.input_devices() else {
+            return false;
+        };
+
+        devices.any(|device| Self::device_display_name(&device) == *selected)
+    }
+
+    fn pick_input_device(host: &cpal::Host, preferred_name: Option<&str>) -> Option<cpal::Device> {
+        if let Some(name) = preferred_name {
+            if let Ok(mut devices) = host.input_devices() {
+                if let Some(device) = devices.find(|d| Self::device_display_name(d) == name) {
+                    return Some(device);
+                }
+            }
+            tracing::warn!(
+                "Preferred input device '{}' not found, falling back to default",
+                name
+            );
+        }
+        let default_device = host.default_input_device();
+        let Some(default_device) = default_device else {
+            return None;
+        };
+
+        let default_name = Self::device_display_name(&default_device);
+        if !Self::looks_like_loopback(&default_name) {
+            return Some(default_device);
+        }
+
+        tracing::warn!(
+            "Default device '{}' looks like loopback, trying to pick a microphone input",
+            default_name
+        );
+
+        if let Ok(mut devices) = host.input_devices() {
+            if let Some(alternative) = devices.find(|d| {
+                let name = Self::device_display_name(d);
+                !Self::looks_like_loopback(&name)
+            }) {
+                return Some(alternative);
+            }
+        }
+
+        Some(default_device)
+    }
+
+    fn device_display_name(device: &cpal::Device) -> String {
+        device
+            .name()
+            .or_else(|_| device.description().map(|d| d.name().to_string()))
+            .unwrap_or_else(|_| "Unknown input".to_string())
+    }
+
+    fn looks_like_loopback(name: &str) -> bool {
+        let lower = name.to_ascii_lowercase();
+        let patterns = [
+            "stereo mix",
+            "what u hear",
+            "wave out",
+            "loopback",
+            "monitor",
+        ];
+        patterns.iter().any(|p| lower.contains(p))
     }
 }
 

@@ -36,6 +36,7 @@ const Dashboard: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
+  const [isDashboardMaximized, setIsDashboardMaximized] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -209,15 +210,39 @@ const Dashboard: React.FC = () => {
               <h1>{pageTitle}</h1>
               <p>{totalItems} transcriptions saved</p>
             </div>
-            <button
-              type="button"
-              className="dashboard-close-btn"
-              onClick={() => {
-                void invoke('hide_dashboard');
-              }}
-            >
-              Close
-            </button>
+            <div className="dashboard-window-controls">
+              <button
+                type="button"
+                className="dashboard-window-btn"
+                aria-label="Minimize dashboard"
+                onClick={() => {
+                  void invoke('dashboard_minimize');
+                }}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                className="dashboard-window-btn"
+                aria-label="Toggle maximize dashboard"
+                onClick={async () => {
+                  const maximized = await invoke<boolean>('dashboard_toggle_maximize');
+                  setIsDashboardMaximized(maximized);
+                }}
+              >
+                {isDashboardMaximized ? '❐' : '□'}
+              </button>
+              <button
+                type="button"
+                className="dashboard-window-btn dashboard-window-btn-close"
+                aria-label="Close dashboard"
+                onClick={() => {
+                  void invoke('dashboard_close');
+                }}
+              >
+                ×
+              </button>
+            </div>
           </header>
 
           {activeSection === 'dashboard' && (

@@ -17,6 +17,7 @@ export interface DashboardData {
   userName: string;
   hasApiKey: boolean;
   apiKeyMasked?: string | null;
+  inputDeviceName?: string | null;
   hotkey: string;
   language: 'pt' | 'en' | 'auto';
   stats: DashboardStats;

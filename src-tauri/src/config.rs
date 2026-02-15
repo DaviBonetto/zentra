@@ -24,6 +24,7 @@ pub struct AppConfig {
     pub user_name: String,
     pub use_case: String,
     pub groq_api_key_obfuscated: Option<String>,
+    pub input_device_name: Option<String>,
     pub hotkey: String,
     pub language: String,
     pub stats: Stats,
@@ -37,6 +38,7 @@ impl Default for AppConfig {
             user_name: String::new(),
             use_case: DEFAULT_USE_CASE.to_string(),
             groq_api_key_obfuscated: None,
+            input_device_name: None,
             hotkey: DEFAULT_HOTKEY.to_string(),
             language: DEFAULT_LANGUAGE.to_string(),
             stats: Stats::default(),
@@ -73,6 +75,7 @@ pub struct SetupState {
     pub user_name: String,
     pub use_case: String,
     pub has_api_key: bool,
+    pub input_device_name: Option<String>,
     pub hotkey: String,
     pub language: String,
     pub github_url: String,
@@ -84,6 +87,7 @@ pub struct SetupPartialPayload {
     pub user_name: Option<String>,
     pub use_case: Option<String>,
     pub api_key: Option<String>,
+    pub input_device_name: Option<String>,
     pub hotkey: Option<String>,
     pub language: Option<String>,
 }
@@ -94,6 +98,7 @@ pub struct CompleteSetupPayload {
     pub user_name: String,
     pub use_case: String,
     pub api_key: String,
+    pub input_device_name: Option<String>,
     pub hotkey: String,
     pub language: String,
 }
@@ -104,6 +109,7 @@ pub struct DashboardData {
     pub user_name: String,
     pub has_api_key: bool,
     pub api_key_masked: Option<String>,
+    pub input_device_name: Option<String>,
     pub hotkey: String,
     pub language: String,
     pub stats: DashboardStats,
@@ -135,6 +141,7 @@ pub struct RecordHistoryPayload {
 pub struct UpdateSettingsPayload {
     pub user_name: Option<String>,
     pub api_key: Option<String>,
+    pub input_device_name: Option<String>,
     pub hotkey: Option<String>,
     pub language: Option<String>,
 }
@@ -192,6 +199,7 @@ pub fn setup_state(config: &AppConfig) -> SetupState {
         user_name: config.user_name.clone(),
         use_case: config.use_case.clone(),
         has_api_key: config.groq_api_key_obfuscated.is_some(),
+        input_device_name: config.input_device_name.clone(),
         hotkey: normalize_hotkey(&config.hotkey),
         language: normalize_language(&config.language),
         github_url: GITHUB_URL.to_string(),
@@ -217,6 +225,7 @@ pub fn complete_setup(app: &AppHandle, payload: CompleteSetupPayload) -> Result<
     if !payload.api_key.trim().is_empty() {
         config.groq_api_key_obfuscated = Some(obfuscate_api_key(payload.api_key.trim()));
     }
+    config.input_device_name = normalize_device_name(payload.input_device_name);
     config.hotkey = normalize_hotkey(&payload.hotkey);
     config.language = normalize_language(&payload.language);
     config.setup_completed = true;
@@ -249,6 +258,7 @@ pub fn dashboard_data(app: &AppHandle, app_version: &str) -> Result<DashboardDat
         user_name: config.user_name.clone(),
         has_api_key: config.groq_api_key_obfuscated.is_some(),
         api_key_masked: decode_api_key(&config).map(|key| mask_api_key(&key)),
+        input_device_name: config.input_device_name.clone(),
         hotkey: normalize_hotkey(&config.hotkey),
         language: normalize_language(&config.language),
         stats: DashboardStats {
@@ -326,6 +336,10 @@ pub fn update_settings(app: &AppHandle, payload: UpdateSettingsPayload) -> Resul
         }
     }
 
+    if payload.input_device_name.is_some() {
+        config.input_device_name = normalize_device_name(payload.input_device_name);
+    }
+
     if let Some(hotkey) = payload.hotkey {
         config.hotkey = normalize_hotkey(&hotkey);
     }
@@ -364,6 +378,7 @@ fn save_raw(path: &PathBuf, config: &AppConfig) -> Result<(), String> {
 fn normalize_config(config: &mut AppConfig) {
     config.hotkey = normalize_hotkey(&config.hotkey);
     config.language = normalize_language(&config.language);
+    config.input_device_name = normalize_device_name(config.input_device_name.clone());
     if config.use_case.trim().is_empty() {
         config.use_case = DEFAULT_USE_CASE.to_string();
     }
@@ -387,6 +402,10 @@ fn apply_partial(config: &mut AppConfig, payload: SetupPartialPayload) {
         if !trimmed.is_empty() {
             config.groq_api_key_obfuscated = Some(obfuscate_api_key(trimmed));
         }
+    }
+
+    if payload.input_device_name.is_some() {
+        config.input_device_name = normalize_device_name(payload.input_device_name);
     }
 
     if let Some(hotkey) = payload.hotkey {
@@ -462,4 +481,15 @@ fn mask_api_key(api_key: &str) -> String {
     let prefix = &api_key[..6];
     let suffix = &api_key[api_key.len().saturating_sub(4)..];
     format!("{}********{}", prefix, suffix)
+}
+
+fn normalize_device_name(name: Option<String>) -> Option<String> {
+    name.and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
 }

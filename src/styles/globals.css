@@ -810,6 +810,16 @@ body,
   color: var(--white-60);
 }
 
+.setup-mic-device-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.setup-mic-device-row .setup-input {
+  flex: 1;
+}
+
 .setup-volume-meter {
   height: 8px;
   border-radius: 999px;
@@ -1042,6 +1052,35 @@ body,
 .dashboard-close-btn:hover {
   border-color: rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.09);
+}
+
+.dashboard-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-window-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--white-85);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dashboard-window-btn:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.dashboard-window-btn-close:hover {
+  border-color: rgba(255, 83, 83, 0.55);
+  background: rgba(255, 83, 83, 0.18);
+  color: rgba(255, 220, 220, 0.95);
 }
 
 .dashboard-overview {

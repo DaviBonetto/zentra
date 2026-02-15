@@ -77,4 +77,20 @@ impl AudioRecorder {
     pub fn audio_level_handle(&self) -> Arc<AtomicU32> {
         self.capture.audio_level_handle()
     }
+
+    pub fn list_input_devices(&self) -> Result<Vec<String>, String> {
+        self.capture.list_input_devices()
+    }
+
+    pub fn selected_input_device(&self) -> Option<String> {
+        self.capture.selected_input_device()
+    }
+
+    pub fn set_selected_input_device(&mut self, name: Option<String>) {
+        self.capture.set_selected_input_device(name);
+    }
+
+    pub fn selected_device_available(&self) -> bool {
+        self.capture.has_selected_device_available()
+    }
 }
