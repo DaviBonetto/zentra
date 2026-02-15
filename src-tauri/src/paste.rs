@@ -64,13 +64,12 @@ impl PasteContext {
     }
 }
 
-#[cfg(target_os = "windows")]
-fn capture_target_window(zentra_window: isize) -> Option<isize> {
+#[cfg(target_os = "windows")]`r`nfn is_same_window(a: isize, b: isize) -> bool {`r`n    a != 0 && b != 0 && a == b`r`n}`r`n`r`n#[cfg(target_os = "windows")]`r`nfn capture_target_window(zentra_window: isize) -> Option<isize> {
     use winapi::um::winuser::GetForegroundWindow;
 
     unsafe {
         let hwnd = GetForegroundWindow() as isize;
-        if hwnd == 0 || hwnd == zentra_window {
+        if hwnd == 0 || is_same_window(hwnd, zentra_window) {
             None
         } else {
             Some(hwnd)
@@ -101,7 +100,7 @@ fn try_auto_paste_windows(target_hwnd: Option<isize>, zentra_window: isize) -> P
             return PasteAttempt::fallback("no_foreground_window");
         }
 
-        if current_hwnd == zentra_window {
+        if is_same_window(current_hwnd, zentra_window) {
             let restored = SetForegroundWindow(target_hwnd as HWND) != 0;
             if !restored {
                 return PasteAttempt::fallback("restore_focus_failed");
@@ -237,4 +236,5 @@ unsafe fn make_key_input(vk: u16, key_up: bool) -> winapi::um::winuser::INPUT {
         Err(err) => PasteAttempt::fallback(format!("macos_applescript_error: {}", err)),
     }
 }
+
 
