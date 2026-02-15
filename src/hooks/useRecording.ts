@@ -67,6 +67,7 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
   const [mode, setMode] = useState<'ai' | 'clarity'>('ai');
   const stateRef = useRef<BarState>('idle');
   const transitionLockRef = useRef(false);
+  const listenerBoundRef = useRef(false);
 
   useEffect(() => {
     // keep latest state in ref so global shortcut callbacks never use stale values
@@ -177,6 +178,16 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
     setState('idle');
   }, []);
 
+  const handleToggleFromHotkey = useCallback(() => {
+    if (transitionLockRef.current) return;
+
+    if (stateRef.current === 'idle') {
+      void startRecording();
+    } else if (stateRef.current === 'recording') {
+      void stopRecording();
+    }
+  }, [startRecording, stopRecording]);
+
   const closeApp = useCallback(async () => {
     try {
       if (stateRef.current === 'recording') {
@@ -189,6 +200,9 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
   }, []);
 
   useEffect(() => {
+    if (listenerBoundRef.current) return;
+    listenerBoundRef.current = true;
+
     let disposed = false;
     let unlistenFn: (() => void) | null = null;
     void listen('toggle-recording', () => {
@@ -207,6 +221,7 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
 
     return () => {
       disposed = true;
+      listenerBoundRef.current = false;
       if (unlistenFn) {
         unlistenFn();
       }
