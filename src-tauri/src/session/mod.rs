@@ -121,7 +121,7 @@ impl SessionStitcher {
                 tracing::error!("Segment {} failed: {:?}", sequence_number, e);
 
                 let placeholder_transcript = Transcript {
-                    text: "[inaudível]".to_string(),
+                    text: INAUDIBLE_PLACEHOLDER.to_string(),
                     confidence: 0.0,
                     language: None,
                     duration_secs: segment.duration_secs,
@@ -214,8 +214,9 @@ impl SessionStitcher {
     }
 }
 
-fn format_stitch_error(err: StitchError) -> String {
+const INAUDIBLE_PLACEHOLDER: &str = "[inaudível]";`r`n`r`nfn format_stitch_error(err: StitchError) -> String {
     match err {
         StitchError::SegmentNotTranscribed(id) => format!("Segment not transcribed: {}", id),
     }
 }
+
