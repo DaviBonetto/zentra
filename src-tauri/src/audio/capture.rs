@@ -1,10 +1,10 @@
-use crate::audio::AudioBuffer;
+﻿use crate::audio::AudioBuffer;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{
     atomic::{AtomicU32, Ordering},
     Arc, Mutex,
 };
-use tracing::{error, info};
+use tracing::{error, info};`r`n`r`nconst RMS_BOOST: f32 = 2.5;
 
 pub struct AudioCapture {
     stream: Option<cpal::Stream>,
@@ -104,13 +104,13 @@ fn write_input_data(input: &[i16], buffer: &Arc<Mutex<AudioBuffer>>, level: &Arc
     }
 
     let rms = rms_i16(input);
-    let normalized = (rms * 2.5).clamp(0.0, 1.0);
+    let normalized = (rms * RMS_BOOST).clamp(0.0, 1.0);
     level.store(normalized.to_bits(), Ordering::Relaxed);
 }
 
 fn write_input_data_f32(input: &[f32], buffer: &Arc<Mutex<AudioBuffer>>, level: &Arc<AtomicU32>) {
     let rms = rms_f32(input);
-    let normalized = (rms * 2.5).clamp(0.0, 1.0);
+    let normalized = (rms * RMS_BOOST).clamp(0.0, 1.0);
     level.store(normalized.to_bits(), Ordering::Relaxed);
 
     // Convert f32 to i16
@@ -141,3 +141,4 @@ fn rms_f32(input: &[f32]) -> f32 {
     let sum: f32 = input.iter().map(|&s| s * s).sum();
     (sum / input.len() as f32).sqrt()
 }
+
