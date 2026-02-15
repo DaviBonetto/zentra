@@ -64,7 +64,13 @@ impl PasteContext {
     }
 }
 
-#[cfg(target_os = "windows")]`r`nfn is_same_window(a: isize, b: isize) -> bool {`r`n    a != 0 && b != 0 && a == b`r`n}`r`n`r`n#[cfg(target_os = "windows")]`r`nfn capture_target_window(zentra_window: isize) -> Option<isize> {
+#[cfg(target_os = "windows")]
+fn is_same_window(a: isize, b: isize) -> bool {
+    a != 0 && b != 0 && a == b
+}
+
+#[cfg(target_os = "windows")]
+fn capture_target_window(zentra_window: isize) -> Option<isize> {
     use winapi::um::winuser::GetForegroundWindow;
 
     unsafe {
@@ -211,7 +217,11 @@ unsafe fn make_key_input(vk: u16, key_up: bool) -> winapi::um::winuser::INPUT {
     input
 }
 
-#[cfg(target_os = "macos")]`r`nconst MACOS_PASTE_DELAY_MS: u64 = 180;`r`n`r`n#[cfg(target_os = "macos")]`r`nfn try_auto_paste_macos() -> PasteAttempt {
+#[cfg(target_os = "macos")]
+const MACOS_PASTE_DELAY_MS: u64 = 180;
+
+#[cfg(target_os = "macos")]
+fn try_auto_paste_macos() -> PasteAttempt {
     use std::process::Command;
 
     thread::sleep(Duration::from_millis(MACOS_PASTE_DELAY_MS));

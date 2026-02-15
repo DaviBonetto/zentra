@@ -4,7 +4,9 @@ use std::sync::{
     atomic::{AtomicU32, Ordering},
     Arc, Mutex,
 };
-use tracing::{error, info};`r`n`r`nconst RMS_BOOST: f32 = 2.5;
+use tracing::{error, info};
+
+const RMS_BOOST: f32 = 2.5;
 
 pub struct AudioCapture {
     stream: Option<cpal::Stream>,

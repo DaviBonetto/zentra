@@ -214,7 +214,9 @@ impl SessionStitcher {
     }
 }
 
-const INAUDIBLE_PLACEHOLDER: &str = "[inaudível]";`r`n`r`nfn format_stitch_error(err: StitchError) -> String {
+const INAUDIBLE_PLACEHOLDER: &str = "[inaudível]";
+
+fn format_stitch_error(err: StitchError) -> String {
     match err {
         StitchError::SegmentNotTranscribed(id) => format!("Segment not transcribed: {}", id),
     }
