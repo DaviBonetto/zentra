@@ -12,6 +12,8 @@ use std::time::Duration;
 const GROQ_API_URL: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
 const MAX_DURATION_SECS: f32 = 59.0;
 const TIMEOUT_SECS: u64 = 10;
+const DEFAULT_LANGUAGE: &str = "pt";
+const RESPONSE_FORMAT: &str = "text";
 
 pub struct GroqAdapter {
     api_key: String,
@@ -124,8 +126,8 @@ impl STTAdapter for GroqAdapter {
 
         let form = multipart::Form::new()
             .text("model", "whisper-large-v3")
-            .text("response_format", "text")
-            .text("language", "pt")
+             .text("response_format", RESPONSE_FORMAT)
+             .text("language", DEFAULT_LANGUAGE)
             .part("file", file_part);
 
         let response = self
@@ -154,7 +156,7 @@ impl STTAdapter for GroqAdapter {
                     Ok(Transcript {
                         text: cleaned,
                         confidence: 0.95, // Groq doesn't return confidence, assume high
-                        language: Some("pt".to_string()),
+                        language: Some(DEFAULT_LANGUAGE.to_string()),
                         duration_secs: duration_secs,
                         provider: "Groq".to_string(),
                     })
@@ -184,3 +186,4 @@ impl STTAdapter for GroqAdapter {
         "Groq Whisper"
     }
 }
+
