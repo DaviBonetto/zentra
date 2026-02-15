@@ -1,38 +1,21 @@
-﻿# 🎙 Zentra v1.0.0 — First Public Release
+# Zentra v1.0.1 - Mic Reliability Hotfix
 
-The first public release of **Zentra**, a free and open-source alternative to Wispr Flow.
+This hotfix improves microphone reliability and setup/dashboard usability while keeping the approved Zentra UI and workflow.
 
-## What is Zentra?
-Press `Ctrl+Shift+Space` → speak → text appears wherever you're typing. Powered by Groq's free API. No subscription. No cloud sync. No tracking.
+## Highlights
+- Fixed Setup Step 4 microphone test lifecycle (no monitor freeze/re-entry).
+- Added explicit microphone device selection and persistence.
+- Improved default device fallback to avoid loopback-like inputs where possible.
+- Added dashboard window controls: minimize, maximize/restore, close (hide-only).
+- Updated README screenshots with real captures (bar, setup, dashboard).
 
-## Installation
-1. Download `Zentra_1.0.0_x64-setup.exe` below
-2. Run the installer
-3. Follow the 4-step setup wizard
-4. Get your free API key at [console.groq.com](https://console.groq.com) (no credit card)
-
-## What's included in v1.0.0
-- ✅ Glass morphism floating bar (always-on-top)
-- ✅ Groq API transcription — ~5–10 seconds
-- ✅ Auto-paste wherever your cursor is
-- ✅ VOSK offline fallback
-- ✅ Setup wizard with API key validation
-- ✅ Dashboard with history and stats
-- ✅ System tray integration
-- ✅ Configurable hotkey
+## Installer
+- `Zentra_1.0.1_x64-setup.exe`
 
 ## Requirements
 - Windows 10/11 (x64)
-- Free Groq API key ([get one here](https://console.groq.com))
-
-## Coming soon
-- macOS support
-- Linux support
-- AI Prompt Mode
-- Real-time streaming transcription
+- Free Groq API key ([console.groq.com](https://console.groq.com))
 
 ---
 
-⭐ If Zentra saves you time, please give it a star — it helps more people discover it!
-
-🐛 Found a bug? [Open an issue](https://github.com/DaviBonetto/zentra/issues)
+If Zentra saves you time, please star the repository.
