@@ -1,4 +1,4 @@
-use serde::Serialize;
+﻿use serde::Serialize;
 use std::{thread, time::Duration};
 
 #[derive(Debug, Clone, Serialize)]
@@ -212,11 +212,10 @@ unsafe fn make_key_input(vk: u16, key_up: bool) -> winapi::um::winuser::INPUT {
     input
 }
 
-#[cfg(target_os = "macos")]
-fn try_auto_paste_macos() -> PasteAttempt {
+#[cfg(target_os = "macos")]`r`nconst MACOS_PASTE_DELAY_MS: u64 = 180;`r`n`r`n#[cfg(target_os = "macos")]`r`nfn try_auto_paste_macos() -> PasteAttempt {
     use std::process::Command;
 
-    thread::sleep(Duration::from_millis(180));
+    thread::sleep(Duration::from_millis(MACOS_PASTE_DELAY_MS));
 
     let output = Command::new("osascript")
         .args([
@@ -230,7 +229,7 @@ fn try_auto_paste_macos() -> PasteAttempt {
         Ok(out) => {
             let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
             if stderr.is_empty() {
-                PasteAttempt::fallback("macos_applescript_failed")
+                PasteAttempt::fallback("macos_applescript_failed_accessibility")
             } else {
                 PasteAttempt::fallback(format!("macos_applescript_failed: {}", stderr))
             }
@@ -238,3 +237,4 @@ fn try_auto_paste_macos() -> PasteAttempt {
         Err(err) => PasteAttempt::fallback(format!("macos_applescript_error: {}", err)),
     }
 }
+
