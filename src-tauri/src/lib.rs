@@ -14,7 +14,7 @@ use config::{
 };
 use cpal::traits::{DeviceTrait, HostTrait};
 use orchestrator::FailoverOrchestrator;
-use reqwest::Client;
+use reqwest::{multipart, Client};
 use serde::Serialize;
 use session::{SegmentResult, SessionProgress, SessionStitcher, StitchedResult};
 use std::sync::{
@@ -146,9 +146,22 @@ fn apply_runtime_config(
     state: &AppState,
     config: &AppConfig,
 ) -> Result<(), String> {
-    match config::decode_api_key(config) {
+    let decoded_key = config::decode_api_key(config)
+        .map(|key| key.trim().to_string())
+        .filter(|key| key.starts_with("gsk_"));
+
+    match decoded_key {
         Some(api_key) => std::env::set_var("GROQ_API_KEY", api_key),
-        None => std::env::remove_var("GROQ_API_KEY"),
+        None => {
+            std::env::remove_var("GROQ_API_KEY");
+            tracing::warn!("Groq API key missing or invalid in local config");
+        }
+    }
+
+    match config.language.trim().to_ascii_lowercase().as_str() {
+        "pt" => std::env::set_var("GROQ_STT_LANGUAGE", "pt"),
+        "en" => std::env::set_var("GROQ_STT_LANGUAGE", "en"),
+        _ => std::env::remove_var("GROQ_STT_LANGUAGE"),
     }
 
     {
@@ -159,6 +172,13 @@ fn apply_runtime_config(
     {
         let mut recorder = state.recorder.lock().map_err(|e| e.to_string())?;
         recorder.set_selected_input_device(config.input_device_name.clone());
+        let needs_default = recorder.selected_input_device().is_none() || !recorder.selected_device_available();
+        if needs_default {
+            if let Some(default_device) = recorder.default_input_device_name() {
+                recorder.set_selected_input_device(Some(default_device.clone()));
+                tracing::info!("Using system default input device '{}'", default_device);
+            }
+        }
     }
 
     register_hotkey(app_handle, state, &config.hotkey)
@@ -166,6 +186,16 @@ fn apply_runtime_config(
 
 #[tauri::command]
 fn start_recording(state: State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+    if std::env::var("GROQ_API_KEY")
+        .ok()
+        .filter(|key| key.starts_with("gsk_"))
+        .is_none()
+    {
+        return Err("Groq API key missing or invalid. Configure it in Setup/Settings.".to_string());
+    }
+
+    // Ensure monitor capture (setup step 4) never competes with real recording capture.
+    stop_capture_safely(state.inner());
     start_capture(state.inner(), &app_handle, true)
 }
 
@@ -193,11 +223,9 @@ fn get_microphone_info(state: State<'_, AppState>) -> Result<MicrophoneInfo, Str
     drop(recorder);
 
     let host = cpal::default_host();
-    let default_name = host.default_input_device().and_then(|d| {
-        d.name()
-            .ok()
-            .or_else(|| d.description().ok().map(|desc| desc.name().to_string()))
-    });
+    let default_name = host
+        .default_input_device()
+        .and_then(|d| d.description().ok().map(|desc| desc.name().to_string()));
 
     let (available, name) = match selected {
         Some(selected_name) if selected_available => (true, Some(selected_name)),
@@ -315,13 +343,26 @@ async fn validate_groq_key(api_key: String) -> Result<bool, String> {
         return Ok(false);
     }
 
+    let wav_probe = build_validation_wav_probe();
+    let file_part = multipart::Part::bytes(wav_probe)
+        .file_name("probe.wav")
+        .mime_str("audio/wav")
+        .map_err(|e| e.to_string())?;
+
+    let form = multipart::Form::new()
+        .text("model", "whisper-large-v3")
+        .text("response_format", "text")
+        .part("file", file_part);
+
     let response = Client::new()
-        .get("https://api.groq.com/openai/v1/models")
+        .post("https://api.groq.com/openai/v1/audio/transcriptions")
         .bearer_auth(api_key.trim())
-        .timeout(std::time::Duration::from_secs(5))
+        .multipart(form)
+        .timeout(std::time::Duration::from_secs(8))
         .send()
         .await
         .map_err(|e| e.to_string())?;
+
     Ok(response.status().is_success())
 }
 
@@ -411,6 +452,35 @@ fn hide_main_window(state: State<'_, AppState>, app_handle: tauri::AppHandle) ->
         main_window.hide().map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+fn build_validation_wav_probe() -> Vec<u8> {
+    let sample_rate: u32 = 16_000;
+    let channels: u16 = 1;
+    let sample_count: usize = 1_600; // 100ms silence
+    let mut wav = Vec::with_capacity(44 + sample_count * 2);
+
+    wav.extend_from_slice(b"RIFF");
+    let file_size = (36 + sample_count * 2) as u32;
+    wav.extend_from_slice(&file_size.to_le_bytes());
+    wav.extend_from_slice(b"WAVE");
+
+    wav.extend_from_slice(b"fmt ");
+    wav.extend_from_slice(&16u32.to_le_bytes());
+    wav.extend_from_slice(&1u16.to_le_bytes());
+    wav.extend_from_slice(&channels.to_le_bytes());
+    wav.extend_from_slice(&sample_rate.to_le_bytes());
+    let byte_rate = sample_rate * channels as u32 * 2;
+    wav.extend_from_slice(&byte_rate.to_le_bytes());
+    wav.extend_from_slice(&(channels * 2).to_le_bytes());
+    wav.extend_from_slice(&16u16.to_le_bytes());
+
+    wav.extend_from_slice(b"data");
+    let data_size = (sample_count * 2) as u32;
+    wav.extend_from_slice(&data_size.to_le_bytes());
+    wav.extend(std::iter::repeat(0u8).take(sample_count * 2));
+
+    wav
 }
 
 fn current_zentra_window_handle(app_handle: &tauri::AppHandle) -> isize {

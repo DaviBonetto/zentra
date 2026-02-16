@@ -68,6 +68,53 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+function formatInvokeError(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function mapRecordingErrorToToast(message: string): ToastPayload {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('groq api key missing') || normalized.includes('authentication failed')) {
+    return {
+      type: 'error',
+      title: 'Invalid Groq API key',
+      subtitle: 'Open Setup/Settings and configure a valid key',
+      durationMs: 2800,
+    };
+  }
+  if (normalized.includes('rate limit')) {
+    return {
+      type: 'error',
+      title: 'Groq rate limit reached',
+      subtitle: 'Wait a moment and try again',
+      durationMs: 2600,
+    };
+  }
+  if (normalized.includes('timeout')) {
+    return {
+      type: 'error',
+      title: 'Groq request timed out',
+      subtitle: 'Check connection and retry',
+      durationMs: 2600,
+    };
+  }
+  return {
+    type: 'error',
+    title: 'Failed to process audio',
+    durationMs: 2200,
+  };
+}
+
 export function useRecording({ onToast }: UseRecordingOptions = {}) {
   const [state, setState] = useState<BarState>('idle');
   const [mode, setMode] = useState<'ai' | 'clarity'>('ai');
@@ -89,12 +136,22 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
       setState('recording');
     } catch (err) {
       console.error('Start recording failed:', err);
-      onToast?.({
-        type: 'error',
-        title: 'Unable to start recording',
-        subtitle: 'Check microphone availability',
-        durationMs: 2400,
-      });
+      const message = formatInvokeError(err);
+      if (message.toLowerCase().includes('groq api key missing')) {
+        onToast?.({
+          type: 'error',
+          title: 'Invalid Groq API key',
+          subtitle: 'Open Setup/Settings and configure a valid key',
+          durationMs: 2800,
+        });
+      } else {
+        onToast?.({
+          type: 'error',
+          title: 'Unable to start recording',
+          subtitle: 'Check microphone availability',
+          durationMs: 2400,
+        });
+      }
       setState('idle');
     } finally {
       transitionLockRef.current = false;
@@ -135,7 +192,10 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
         return;
       }
 
-      const durationSeconds = result.total_duration_secs ?? estimateDurationSeconds(audio);
+      const durationSeconds =
+        result.total_duration_secs && result.total_duration_secs > 0.05
+          ? result.total_duration_secs
+          : estimateDurationSeconds(audio);
       const wordCount = countWords(finalText);
       try {
         await invoke('record_transcription_history', {
@@ -171,11 +231,8 @@ export function useRecording({ onToast }: UseRecordingOptions = {}) {
       }
     } catch (err) {
       console.error('Stop/transcribe failed:', err);
-      onToast?.({
-        type: 'error',
-        title: 'Failed to process audio',
-        durationMs: 2200,
-      });
+      const message = formatInvokeError(err);
+      onToast?.(mapRecordingErrorToToast(message));
     } finally {
       setState('idle');
       transitionLockRef.current = false;

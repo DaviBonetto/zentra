@@ -91,13 +91,15 @@ const SetupWizard: React.FC = () => {
   const detectMic = useCallback(async () => {
     try {
       const info = await invoke<{ available: boolean; name?: string }>('get_microphone_info');
-      setMicAvailable(Boolean(info.available));
-      setMicName(info.name || '');
-      return Boolean(info.available);
+      const available = Boolean(info.available);
+      const name = info.name || '';
+      setMicAvailable(available);
+      setMicName(name);
+      return { available, name };
     } catch {
       setMicAvailable(false);
       setMicName('');
-      return false;
+      return { available: false, name: '' };
     }
   }, []);
 
@@ -111,8 +113,10 @@ const SetupWizard: React.FC = () => {
       if (response.selected) {
         setSelectedInputDevice(response.selected);
       }
+      return response;
     } catch (error) {
       setErrorMessage(`Unable to list microphones: ${String(error)}`);
+      return { devices: [] as string[], selected: null as string | null };
     } finally {
       setRefreshingDevices(false);
     }
@@ -120,18 +124,27 @@ const SetupWizard: React.FC = () => {
 
   useEffect(() => {
     if (step !== 4) {
-      if (micMonitoring) {
-        void invoke('stop_mic_monitor');
-        setMicMonitoring(false);
-      }
+      void invoke('stop_mic_monitor');
+      setMicMonitoring(false);
       return;
     }
 
     let cancelled = false;
     const bootMicMonitor = async () => {
-      await loadInputDevices();
-      const available = await detectMic();
-      if (!available || cancelled) return;
+      const devicesResponse = await loadInputDevices();
+      const micInfo = await detectMic();
+      if (cancelled) return;
+
+      if (!selectedInputDevice && micInfo.name && devicesResponse.devices.includes(micInfo.name)) {
+        try {
+          await invoke('select_input_device', { name: micInfo.name });
+          setSelectedInputDevice(micInfo.name);
+        } catch (error) {
+          setErrorMessage(`Failed to auto-select microphone: ${String(error)}`);
+        }
+      }
+
+      if (!micInfo.available || cancelled) return;
 
       try {
         await invoke('start_mic_monitor');
@@ -152,7 +165,7 @@ const SetupWizard: React.FC = () => {
       void invoke('stop_mic_monitor');
       setMicMonitoring(false);
     };
-  }, [step, detectMic, loadInputDevices]);
+  }, [step, detectMic, loadInputDevices, selectedInputDevice]);
 
   const handleOpenGithub = useCallback(async () => {
     await openUrl(githubUrl);
@@ -255,7 +268,7 @@ const SetupWizard: React.FC = () => {
           userName: userName.trim(),
           useCase,
           apiKey: apiKey.trim(),
-          inputDeviceName: selectedInputDevice || undefined,
+          inputDeviceName: selectedInputDevice || micName || undefined,
           hotkey,
           language,
         };
@@ -387,8 +400,8 @@ const SetupWizard: React.FC = () => {
                   if (step === 4) {
                     await invoke('stop_mic_monitor');
                     setMicMonitoring(false);
-                    const available = await detectMic();
-                    if (available) {
+                    const micInfo = await detectMic();
+                    if (micInfo.available) {
                       await invoke('start_mic_monitor');
                       setMicMonitoring(true);
                     }

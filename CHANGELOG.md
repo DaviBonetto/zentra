@@ -2,6 +2,19 @@
 
 All notable changes to Zentra will be documented here.
 
+## [1.0.2] - 2026-02-16
+
+### Fixed
+- Restored real-time microphone capture reliability after Windows endpoint recovery.
+- Hardened recording lifecycle so monitor capture never conflicts with primary recording.
+- Improved STT reliability by keeping Groq as the only active provider in production flow.
+- Added clearer runtime error messaging when Groq API key is missing or invalid.
+
+### Improved
+- Improved input-device selection fallback to avoid loopback-like devices.
+- Improved transcript preprocessing path for stable 16k mono uploads to Groq.
+- Kept dashboard/session metrics pipeline coherent with duration-based stats updates.
+
 ## [1.0.1] - 2026-02-15
 
 ### Fixed

@@ -93,4 +93,8 @@ impl AudioRecorder {
     pub fn selected_device_available(&self) -> bool {
         self.capture.has_selected_device_available()
     }
+
+    pub fn default_input_device_name(&self) -> Option<String> {
+        self.capture.default_input_device_name()
+    }
 }

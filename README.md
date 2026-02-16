@@ -25,7 +25,7 @@ No subscription. No cloud. No limits.
 
 <br/>
 
-<a href="https://github.com/DaviBonetto/zentra/releases/latest/download/Zentra_1.0.1_x64-setup.exe">
+<a href="https://github.com/DaviBonetto/zentra/releases/latest/download/Zentra_1.0.2_x64-setup.exe">
   <img src="https://img.shields.io/badge/⬇%20Download%20for%20Windows-0e0e10?style=for-the-badge" height="44" alt="Download for Windows"/>
 </a>
 
@@ -133,7 +133,7 @@ flowchart TD
 ### Option 1 — Install (Recommended)
 
 1. Download the installer from [Releases](https://github.com/DaviBonetto/zentra/releases)
-2. Run `Zentra_1.0.1_x64-setup.exe`
+2. Run `Zentra_1.0.2_x64-setup.exe`
 3. Follow the setup wizard (2 minutes):
    - Enter your name
    - Get your **free** [Groq API key](https://console.groq.com) (no credit card)
@@ -175,7 +175,7 @@ npm run tauri:build
 
 ## Roadmap
 
-### v1.0.0 — Current ✅
+### v1.0.2 — Current ✅
 - [x] Floating bar UI with glass morphism
 - [x] Groq API transcription (~5–10s)
 - [x] Auto-paste via Windows SendInput

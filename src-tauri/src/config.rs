@@ -244,10 +244,8 @@ pub fn dashboard_data(app: &AppHandle, app_version: &str) -> Result<DashboardDat
     } else {
         ((config.stats.total_words as f32 / 130.0) * 10.0).round() / 10.0
     };
-    let wpm = if config.stats.total_words == 0 {
+    let wpm = if config.stats.total_words == 0 || config.stats.total_recording_seconds <= 0.1 {
         0.0
-    } else if config.stats.total_recording_seconds <= 0.1 {
-        130.0
     } else {
         ((config.stats.total_words as f32 / (config.stats.total_recording_seconds / 60.0)) * 10.0)
             .round()
@@ -283,11 +281,7 @@ pub fn record_history(app: &AppHandle, payload: RecordHistoryPayload) -> Result<
     let word_count = payload
         .word_count
         .unwrap_or_else(|| count_words(cleaned_text) as u32);
-    let duration_seconds = if payload.duration_seconds > 0.05 {
-        payload.duration_seconds
-    } else {
-        estimate_duration_from_words(word_count)
-    };
+    let duration_seconds = payload.duration_seconds.max(0.0);
 
     let item = HistoryItem {
         id: uuid::Uuid::new_v4().to_string(),
@@ -421,14 +415,6 @@ fn count_words(text: &str) -> usize {
     text.split_whitespace().count()
 }
 
-fn estimate_duration_from_words(word_count: u32) -> f32 {
-    if word_count == 0 {
-        0.0
-    } else {
-        (word_count as f32 / 130.0) * 60.0
-    }
-}
-
 fn recompute_stats(config: &mut AppConfig) {
     let total_transcriptions = config.history.len() as u64;
     let total_words = config
@@ -439,13 +425,8 @@ fn recompute_stats(config: &mut AppConfig) {
     let total_recording_seconds = config
         .history
         .iter()
-        .map(|item| {
-            if item.duration_seconds > 0.05 {
-                item.duration_seconds
-            } else {
-                estimate_duration_from_words(item.word_count)
-            }
-        })
+        .map(|item| item.duration_seconds.max(0.0))
+        .filter(|duration| *duration > 0.05)
         .sum::<f32>();
     let total_seconds_saved = (total_words as f32 / 130.0) * 60.0;
 
