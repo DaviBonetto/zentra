@@ -235,7 +235,9 @@ git push origin feat/your-feature-name
 
 <div align="center">
 
-[![Star History Chart](https://api.star-history.com/svg?repos=DaviBonetto/zentra&type=Date)](https://star-history.com/#DaviBonetto/zentra&Date)
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=DaviBonetto/zentra&type=date&legend=top-left)](https://www.star-history.com/#DaviBonetto/zentra&type=date&legend=top-left)
 
 </div>
 
