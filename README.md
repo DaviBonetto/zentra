@@ -20,7 +20,7 @@
 <p>
 The free, open-source alternative to Wispr Flow and Willow.<br/>
 Press your hotkey → speak → text appears wherever you're typing.<br/>
-No subscription. No cloud. No limits
+No subscription. No cloud. No limits.
 </p>
 
 <br/>
